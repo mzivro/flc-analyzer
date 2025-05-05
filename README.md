@@ -36,7 +36,7 @@ For Linux:
 ```bash
 git clone https://github.com/mzivro/flc-analyzer.git
 cd flc-analyzer
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python src/main.py
