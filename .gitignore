@@ -1,0 +1,75 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyInstaller
+*.spec
+dist/
+build/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# mypy / pylint / pyright / etc.
+.mypy_cache/
+.dmypy.json
+.pytype/
+.pyright/
+
+# Pyre type checker
+.pyre/
+
+# Cython build
+cython_debug/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb~
+
+# VS Code / PyCharm / etc.
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Mac/Linux/Windows system files
+.DS_Store
+Thumbs.db
+
+# dotenv
+*.env
+*.env.*
+
+# Poetry
+poetry.lock
+
+# Pytest cache
+.pytest_cache/
+
+# Local dev tools
+*.log
+logs/
+*.sqlite3
