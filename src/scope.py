@@ -8,21 +8,75 @@ import time
 
 
 class Scope():
+    """
+    This class connects to oscilloscope, downloads data and processes data.
+    This code is tested only for LeCroy WaveRunner 104MXi-A, should work
+    for other LeCroy devices with minimun or none code modification.
+
+    Methods for LeCroy devices begins with lecroy.
+
+    Attributes
+    ----------
+    rm : pyvisa.ResourceManager
+        Resource Manager from pyVISA, manages connection with oscilloscope.
+    scope : pyvisa.resources.TCPIPInstrument
+        Contains reference to connected oscilloscope
+        sends and retrieves data from it.
+    ip_address : str
+        Contains IP address of oscilloscope.
+    channel : str
+        Contains channel ID of oscilloscope.
+
+    Methods
+    -------
+    lecroy_parse_wavedesc(wavedesc_bytes)
+        Parses waveform description retrieved from oscilloscope.
+    lecroy_get_waveform()
+        Gets and extracts data from oscilloscope.
+    get_waveform(ip_address, channel)
+        Checks oscilloscope model and runs method suitable for it.
+    """
     def __init__(self):
+        """
+        Inits class.
+        """
         self.rm = pyvisa.ResourceManager()
         self.scope = None
         self.ip_address = None
         self.channel = None
 
     def lecroy_parse_wavedesc(self, wavedesc_bytes):
+        """
+        Parses WAVEDESC byteblock and unpacks values from it.
+
+        Parameters
+        ----------
+        wavedesc_bytes : bytes
+            Bytes block of description of waveform.
+
+        Returns
+        -------
+        params : dict
+            Dictionary of values extracted from description block.
+
+        Raises
+        ------
+        struct.error
+            If error occurs during bytes block unpacking.
+        Exception
+            Unexpected error.
+        """
         if len(wavedesc_bytes) < 346:
             tk.messagebox.showerror("Error",
-                f"Got incomplete WAVEDESC block ({len(wavedesc_bytes)} bytes) expected at least 346")
+                f"Got incomplete WAVEDESC block ({len(wavedesc_bytes)}" \
+                f" bytes) expected at least 346")
             return None
 
         try:
             comm_order_code = struct.unpack_from("<h", wavedesc_bytes, 32)[0]
-            endian_prefix = "<" if comm_order_code == 1 else ">" # 1 = LO = Little Endian
+
+            # 1 = LO = Little Endian
+            endian_prefix = "<" if comm_order_code == 1 else ">"
 
             wavedesc_format = endian_prefix + (
                 "16s"   # DESCRIPTOR_NAME
@@ -70,24 +124,31 @@ class Scope():
 
             if header_size > len(wavedesc_bytes):
                 tk.messagebox.showerror("Error",
-                    f"Definied WAVEDESC format ({header_size} bytes) is longer than received data ({len(wavedesc_bytes)} bytes)")
+                    f"Definied WAVEDESC format ({header_size} bytes) is"\
+                    f" longer than received data ({len(wavedesc_bytes)} "\
+                    f"bytes)")
                 return None
 
-            unpacked_data = struct.unpack_from(wavedesc_format, wavedesc_bytes, 0)
+            unpacked_data = struct.unpack_from(wavedesc_format,\
+                wavedesc_bytes, 0)
 
-            # Mapowanie rozpakowanych wartości do słownika
+            # maps unpacked values to dictionary
             params = {
-                "descriptor_name": unpacked_data[0].split(b"\x00", 1)[0].decode("ascii", errors="ignore"),
-                "template_name": unpacked_data[1].split(b"\x00", 1)[0].decode("ascii", errors="ignore"),
+                "descriptor_name": unpacked_data[0].split(b"\x00", 1)[0]\
+                .decode("ascii", errors="ignore"),
+                "template_name": unpacked_data[1].split(b"\x00", 1)[0]\
+                .decode("ascii", errors="ignore"),
                 "comm_type": unpacked_data[2],
                 "comm_order": unpacked_data[3],
                 "wave_descriptor_length": unpacked_data[4],
                 "user_text_length": unpacked_data[5],
                 "trigtime_array_length": unpacked_data[7],
                 "wave_array_1_length": unpacked_data[10],
-                "instrument_name": unpacked_data[14].split(b"\x00", 1)[0].decode("ascii", errors="ignore"),
+                "instrument_name": unpacked_data[14].split(b"\x00", 1)[0]\
+                .decode("ascii", errors="ignore"),
                 "instrument_number": unpacked_data[15],
-                "trace_label": unpacked_data[16].split(b"\x00", 1)[0].decode("ascii", errors="ignore"),
+                "trace_label": unpacked_data[16].split(b"\x00", 1)[0]\
+                .decode("ascii", errors="ignore"),
                 "wave_array_count": unpacked_data[19],
                 "pnts_per_screen": unpacked_data[20],
                 "first_valid_pnt": unpacked_data[21],
@@ -113,14 +174,17 @@ class Scope():
 
             if params["wave_array_count"] <= 0:
                 tk.messagebox.showerror("Error",
-                    f"Incorrect points count ({params["wave_array_count"]}) in WAVEDESC.")
+                    f"Incorrect points count ({params["wave_array_count"]})"\
+                    " in WAVEDESC.")
                 return None
             if params["vertical_gain"] == 0:
                 tk.messagebox.showwarning("Warning",
-                    f"Vertical gain is 0. Channel might be offline or error occured.")
+                    f"Vertical gain is 0. Channel might be offline "\
+                    "or error occured.")
             if params["horiz_interval"] <= 0:
                 tk.messagebox.showerror("Error",
-                    f"Incorrect horizontal interval ({params["horiz_interval"]}) in WAVEDESC.")
+                    f"Incorrect horizontal interval "\
+                    f"({params["horiz_interval"]}) in WAVEDESC.")
                 return None
 
             return params
@@ -134,24 +198,45 @@ class Scope():
             return None
 
     def lecroy_get_waveform(self):
+        """
+        Downloads and extracts waveform data from oscilloscope.
+
+        Returns
+        -------
+        time : list of float
+            List of time values of waveform.
+        voltage : list of float
+            List of voltage values of waveform.
+
+        Raises
+        ------
+        ValueError
+            If error occurs during data extraction.
+        struct.error
+            If error occurs during binary data unpacking.
+        Exception
+            Unexpected error.
+        """
         try:
             # DATA TRANSFER CONFIGURATION
             # set format data to binary, 16-bit (WORD)
             # DEF9 means using WAVEDESC block before data
             self.scope.write("COMM_FORMAT DEF9,WORD,BIN")
 
-            # set bit order to Little Endian (LSB first) which is typical for LeCroy
+            # set bit order to Little Endian (LSB first) 
+            # which is typical for LeCroy
             # LO = LSB first (Little Endian), HI = MSB first (Big Endian)
             # check device manual to confirm, but LO is frequent
             self.scope.write("COMM_ORDER LO")
 
-            # === Data download ===
+            # DATA DOWNLOAD
 
             self.scope.write(f"{self.channel}:WAVEFORM?")
             time.sleep(0.5)
             header = self.scope.read_bytes(12) # read "#" and count of bytes
             if header[10:11] != b"#":
-                raise ValueError("Incorrect binary response header (lack of '#').")
+                raise ValueError("Incorrect binary response "\
+                    "header (lack of '#').")
             print(header)
             n_digits = int(header[11:12].decode("ascii"))
             num_bytes_str = self.scope.read_bytes(n_digits).decode("ascii")
@@ -159,14 +244,18 @@ class Scope():
             raw_data_bytes = self.scope.read_bytes(total_bytes_to_read)
 
             if len(raw_data_bytes) != total_bytes_to_read:
-                tk.messagebox.showwarning("Warning", f"Expected {total_bytes_to_read} bytes, got {len(raw_data_bytes)}!")
+                tk.messagebox.showwarning("Warning",
+                    f"Expected {total_bytes_to_read} bytes, "\
+                    f"got {len(raw_data_bytes)}!")
 
             # WAVEDESC PARSING
 
             wavedesc_len = 346
 
             if len(raw_data_bytes) < wavedesc_len:
-                raise ValueError(f"Received data is too small ({len(raw_data_bytes)} bytes) to contain full WAVEDESC ({wavedesc_len} bytes).")
+                raise ValueError(f"Received data is too small "\
+                    f"({len(raw_data_bytes)} bytes) to contain full "\
+                    f"WAVEDESC ({wavedesc_len} bytes).")
 
             wavedesc_block = raw_data_bytes[:wavedesc_len]
 
@@ -181,32 +270,42 @@ class Scope():
             data_bytes_expected = params["wave_array_1_length"]
 
             # data begins after WAVEDESC block
-            waveform_raw_bytes = raw_data_bytes[wavedesc_len : wavedesc_len + data_bytes_expected]
+            waveform_raw_bytes = raw_data_bytes[wavedesc_len : wavedesc_len\
+                + data_bytes_expected]
             actual_data_bytes_read = len(waveform_raw_bytes)
 
             if actual_data_bytes_read != data_bytes_expected:
                 tk.messagebox.showwarning("Warning",
-                    f"Real data bytes count ({actual_data_bytes_read}) differs from expected ({data_bytes_expected}).")
-                if params["comm_type"] == 1: # WORD (2 bajty na punkt)
+                    f"Real data bytes count ({actual_data_bytes_read}) "\
+                    f"differs from expected ({data_bytes_expected}).")
+                if params["comm_type"] == 1: # WORD (2 bytes on point)
                     num_points = actual_data_bytes_read // 2
-                elif params["comm_type"] == 0: # BYTE (1 bajt na punkt)
+                elif params["comm_type"] == 0: # BYTE (1 byte on point)
                     num_points = actual_data_bytes_read
                 else:
-                    raise ValueError(f"Unknown data type (comm_type={params["comm_type"]}).")
+                    raise ValueError(f"Unknown data type "\
+                        f"(comm_type={params["comm_type"]}).")
 
             if params["comm_type"] == 1:  # WORD (int16)
-                data_format = params["endian_prefix"] + str(num_points) + "h" # "h" = signed short (16-bit)
+                data_format = params["endian_prefix"] + str(num_points) + \
+                "h" # "h" = signed short (16-bit)
                 bytes_per_point = 2
             elif params["comm_type"] == 0: # BYTE (int8)
-                data_format = params["endian_prefix"] + str(num_points) + "b" # "b" = signed char (8-bit)
+                data_format = params["endian_prefix"] + str(num_points) + \
+                "b" # "b" = signed char (8-bit)
                 bytes_per_point = 1
             else:
-                raise ValueError(f"Unsupported data type in WAVEDESC (COMM_TYPE = {params["comm_type"]})")
+                raise ValueError(f"Unsupported data type in WAVEDESC "\
+                    f"(COMM_TYPE = {params["comm_type"]})")
 
             if actual_data_bytes_read < num_points * bytes_per_point:
-                raise ValueError(f"Insufficient bytes count ({actual_data_bytes_read}) to unpack {num_points} points of type {"WORD" if bytes_per_point==2 else "BYTE"}.")
+                raise ValueError(f"Insufficient bytes count "\
+                    f"({actual_data_bytes_read}) to unpack {num_points} "\
+                    f"points of type "\
+                    f"{"WORD" if bytes_per_point==2 else "BYTE"}.")
 
-            adc_values = np.array(struct.unpack(data_format, waveform_raw_bytes[:num_points * bytes_per_point]))
+            adc_values = np.array(struct.unpack(data_format,
+                waveform_raw_bytes[:num_points * bytes_per_point]))
 
             # scale data to physical values
             vertical_gain = params["vertical_gain"]
@@ -215,7 +314,8 @@ class Scope():
             horiz_offset = params["horiz_offset"]
 
             voltage_data = (adc_values * vertical_gain) - vertical_offset
-            time_data = (np.arange(num_points) * horiz_interval) + horiz_offset
+            time_data = (np.arange(num_points) * horiz_interval) + \
+                horiz_offset
 
             return time_data, voltage_data
         except ValueError as e:
@@ -233,26 +333,55 @@ class Scope():
             tk.messagebox.showerror("Error", error_text)
             return None, None
         except Exception as e:
-            tk.messagebox.showerror("Unexpected error during waveform extraction", f"{e}")
+            tk.messagebox.showerror("Unexpected error during waveform "\
+                "extraction", f"{e}")
             return None, None
 
     def get_waveform(self, ip_address, channel):
+        """
+        Tries to contact with oscilloscope, checks its model and runs code
+        suitable for him.
+
+        Parameters
+        ----------
+        ip_address : str
+            Contains IP address of oscilloscopce.
+        channel : str
+            Contains channel ID of oscilloscope.
+
+        Returns
+        -------
+        time : list of float
+            List of time values of waveform.
+        voltage : list of float
+            List of voltage values of waveform.
+
+        Raises
+        ------
+        pyvisa.errors.VisaIOError
+            Usually if connection with oscilloscope fails.
+        Exception
+            Unexpected error.
+        """
         self.ip_address = ip_address
         self.channel = channel
 
         time = None
         voltage = None
 
-        try:
-            self.scope = self.rm.open_resource(f"TCPIP0::{self.ip_address}::INSTR")
+        try:  # tries to connect with device
+            self.scope = self.rm.open_resource(
+                f"TCPIP0::{self.ip_address}::INSTR")
             self.scope.timeout = 10000
 
+            # asks device for his identity
             identity = self.scope.query("*IDN?")
 
-            if "LECROY" in identity:
+            if "LECROY" in identity: # if this is LeCroy, runs suitable code
                 time, voltage = self.lecroy_get_waveform()
             else:
-                tk.messagebox.showerror("Error", f"This oscilloscope {identity} is not supported!")
+                tk.messagebox.showerror("Error", f"This oscilloscope "\
+                    f"{identity} is not supported!")
         except pyvisa.errors.VisaIOError as e:
             error_text = f"""
             VISA I/O error: {e}
@@ -260,7 +389,8 @@ class Scope():
             Check if:
             1. Oscilloscope is online and connected to your computer?
             2. Oscilloscope ip address {self.ip_address} is correct?
-            3. Ocilloscope have remote control mode enabled? (for example LXI, VXI-11)
+            3. Ocilloscope have remote control mode enabled? 
+            (for example LXI, VXI-11)
             4. Firewall does not block VISA ports? (usually 111 or 5025)
             """
             tk.messagebox.showerror("VISA error", error_text)

@@ -1,4 +1,4 @@
-"""FLC Analyzer module"""
+"""FLC Analyzer GUI module"""
 
 import os
 import csv
@@ -15,11 +15,72 @@ from scope import Scope
 
 class FLCAnalyzer(tk.Tk):
     """
-    FLC Analyzer GUI class
-    This class is responsible only for GUI of the program
+    Graphical user interfance (GUI) to FLC 
+    (ferroelectric liquid crystals) analysis.
+
+    This class reads data from CSV or downloads it through 
+    Scope class, handles them through DataManager class and visualize data.
+    
+    Default parameters (like voltage, thickness, area etc.) are initiated 
+    on startup, but they may be changed by the user.
+
+    Attributes
+    ----------
+    data_manager : DataManager
+        Manages data.
+    scope : Scope
+        Can connect to oscilloscope and download data from it.
+    ax : matplotlib.axes.Axes
+        Chart object visualizing data.
+    canvas : FigureCanvasTkAgg
+        Canvas that enables to display chart on GUI.
+    toolbar : NavigationToolbar2Tk
+        Chart toolbar that enables to modify chart's view.
+    Various tkinter widgets.
+
+    Methods
+    -------
+    validate_entry(text)
+        Entry input validator that validates only numeric values.
+    validate_tilt_angle(text)
+        Entry tilt validator only validates values between 1 and 89.
+    change_values(self, *args)
+        Changes values in regions if new data is loaded
+        or input params are changed.
+    choose_color(param)
+        Changes graph color according to passed parameter and
+        updates graph.
+    update_alpha(*args)
+        Updates alpha values when scale is changed then updates graph.
+    on_click(event)
+        Derives x, y coords of mouse click then updates right panels
+        if data is loaded.
+    load_data_from_scope()
+        Tries to get time and voltage data from oscilloscope
+        through local network, passes them to data manager and
+        draws graph.
+    load_data_from_file()
+        Tries to get time and voltage data from csv file
+        passes them to data manager and draws graph.
+    draw_plot(time, voltage)
+        Clears graph, marks regions and points and draws new graph
+    mark_regions(self)
+        Clears all existing rectangles then draws new one.
+    mark_points(self)
+        Clears all existing points then draws new one.
+    update_right_panels(x)
+        Clears entries on right panel then writes new values.
+    update_bottom_left_panel()
+        Clears entries on left panel then writes new values.
     """
     def __init__(self):
-        """Init GUI"""
+        """
+        Inits main window of FLC Analyzer app.
+
+        Creates all GUI components, sets default parameters, inits
+        DataManager and Scope classes, configures chart and sets
+        events (like clicks or input changes).
+        """
         # init gui, data manager and scope
         super().__init__()
         self.title("FLC analyzer")    # give a title
@@ -383,17 +444,22 @@ class FLCAnalyzer(tk.Tk):
 
     def validate_entry(self, text):
         """
-        Entry input validator - validates only numeric values
+        Entry input validator that validates only numeric values.
 
         Parameters
         ----------
-        bit_generator : type[BitGenerator] or str
-            BitGenerator class or string containing the name of the BitGenerator
+        text : str
+            Text string derived from input.
 
         Returns
         -------
-        BitGenerator : lol
-            BitGenerator instance
+        bool
+            True if passes validation, False if otherwise.
+
+        Raises
+        ------
+        ValueError
+            If text string is not convertible to float.
         """
         if text == "":
             return True
@@ -408,8 +474,22 @@ class FLCAnalyzer(tk.Tk):
 
     def validate_tilt_angle(self, text):
         """
-        Entry tilt validator
-        Only validates values between 1 and 89
+        Entry tilt validator only validates values between 1 and 89.
+
+        Parameters
+        ----------
+        text : str
+            Text string derived from input.
+
+        Returns
+        -------
+        bool
+            True if passes validation, False if otherwise.
+
+        Raises
+        ------
+        ValueError
+            If text string is not convertible to float.
         """
         if text == "":
             return True
@@ -425,7 +505,13 @@ class FLCAnalyzer(tk.Tk):
 
     def change_values(self, *args):
         """
-        Changes values in regions if new data is loaded or input params are changed
+        Changes values in regions if new data is loaded or
+        input params are changed.
+
+        Raises
+        ------
+        ValueError
+            If entry input is not convertible to float.
         """
 
         try:
@@ -448,7 +534,12 @@ class FLCAnalyzer(tk.Tk):
     def choose_color(self, param):
         """
         Changes graph color according to passed parameter and
-        updates graph
+        updates graph.
+
+        Parameters
+        ----------
+        param : str
+            Text string indicating chosen object on graph.
         """
         new_color_code = colorchooser.askcolor()[1]
 
@@ -476,7 +567,9 @@ class FLCAnalyzer(tk.Tk):
             self.toolbar.update()
 
     def update_alpha(self, *args):
-        """Updates alpha values when scale is changed then updates graph"""
+        """
+        Updates alpha values when scale is changed then updates graph.
+        """
         self.inc_alpha_region = self.inc_region_alpha_scale.get() / 100.0
         self.dec_alpha_region = self.dec_region_alpha_scale.get() / 100.0
 
@@ -487,7 +580,12 @@ class FLCAnalyzer(tk.Tk):
     def on_click(self, event):
         """
         Derives x, y coords of mouse click then updates right panels
-        if data is loaded
+        if data is loaded.
+
+        Parameters
+        ----------
+        event : MouseEvent
+            Event indicating mouse click on chart.
         """
         if event.inaxes:
             x = event.xdata
@@ -498,7 +596,7 @@ class FLCAnalyzer(tk.Tk):
         """
         Tries to get time and voltage data from oscilloscope
         through local network, passes them to data manager and
-        draws graph
+        draws graph.
         """
         ip_address = self.ip_address_entry.get()
         channel = self.channel_entry.get()
@@ -515,7 +613,7 @@ class FLCAnalyzer(tk.Tk):
     def load_data_from_file(self):
         """
         Tries to get time and voltage data from csv file
-        passes them to data manager and draws graph
+        passes them to data manager and draws graph.
         """
         time = []
         voltage = []
@@ -555,7 +653,16 @@ class FLCAnalyzer(tk.Tk):
             self.update_bottom_left_panel()
 
     def draw_plot(self, time, voltage):
-        """Clears graph, marks regions and points and draws new graph"""
+        """
+        Clears graph, marks regions and points and draws new graph
+
+        Parameters
+        ----------
+        time : list of float
+            Time data
+        voltage : list of float
+            Voltage data
+        """
         self.ax.clear()      # clears graph
 
         self.mark_regions()  # marks regions
@@ -571,7 +678,9 @@ class FLCAnalyzer(tk.Tk):
         self.toolbar.update()
 
     def mark_regions(self):
-        """Clears all existing rectangles then draws new one"""
+        """
+        Clears all existing rectangles then draws new one.
+        """
         # clear rectangles if some already exists
         for patch in self.ax.patches:
             if isinstance(patch, matplotlib.patches.Rectangle):
@@ -600,7 +709,9 @@ class FLCAnalyzer(tk.Tk):
             )
 
     def mark_points(self):
-        """Clears all existing points then draws new one"""
+        """
+        Clears all existing points then draws new one.
+        """
         # clears points of some already exists
         for obj in self.ax.collections:
             if isinstance(obj, matplotlib.collections.PathCollection):
@@ -629,7 +740,14 @@ class FLCAnalyzer(tk.Tk):
             )
 
     def update_right_panels(self, x):
-        """Clears entries on right panel then writes new values"""
+        """
+        Clears entries on right panel then writes new values.
+
+        Parameters
+        ----------
+        x : float
+            X coord of mouse click event on chart.
+        """
         # set entry states to normal
         self.local_up_entry.config(state="normal")
         self.local_uc_entry.config(state="normal")
@@ -679,7 +797,9 @@ class FLCAnalyzer(tk.Tk):
         self.local_da_entry.config(state="readonly")
 
     def update_bottom_left_panel(self):
-        """Clears entries on left panel then writes new values"""
+        """
+        Clears entries on left panel then writes new values.
+        """
         # set entry states to normal
         self.ps_entry.config(state="normal")
         self.rv_entry.config(state="normal")

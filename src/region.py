@@ -5,9 +5,54 @@ import matplotlib.pyplot as plt
 
 
 class Region:
-    """Region class which holds and process local data in monotonic region"""
+    """
+    Region class which holds and process local data in monotonic region.
+
+    Attributes
+    ----------
+    Various default or processed data.
+
+    Methods
+    -------
+    is_increasing()
+        Checks if region is increasing.
+    update_input_voltage(u_in)
+        Updates input voltage.
+    update_thickness(d)
+        Updates cell thickness.
+    update_area(S)
+        Updates cell area.
+    update_capacitance(C)
+        Updates condensator capacitance.
+    update_tilt_angle(t_ang)
+        Updates tilt angle.
+    get_up()
+        Returns Up.
+    get_uc()
+        Returns Uc.
+    get_tau()
+        Returns tau.
+    get_alpha()
+        Returns alpha.
+    get_sp()
+        Returns Ps.
+    get_rv()
+        Returs rv.
+    get_da()
+        Returns da.
+    get_borders()
+        Returns border coords.
+    get_knee_point()
+        Returns knee point coords.
+    get_t40_point()
+        Returns t40 point coords.
+    get_t60_point()
+        Returns t60 point coords.
+    """
     def __init__(self, time, voltage, dv_dt, increasing):
         """Loads and processes region data"""
+
+        # set up default values
         self.time = time
         self.voltage = voltage
         self.increasing = increasing
@@ -196,7 +241,8 @@ class Region:
             voltage_high_threshold = max_voltage - self.u_c - self.u_p * 0.05
             voltage_low_threshold = max_voltage - self.u_c - self.u_p * 0.95
 
-            # normalize up voltage with exclusion of near min and max u_p volts
+            # normalize up voltage with exclusion 
+            # of near min and max u_p volts
             # and points between t40 and t60
             for i in range(k, len(time)):
                 if voltage[i] > voltage_high_threshold:
@@ -228,80 +274,199 @@ class Region:
         self.alpha = sum(alpha_table) / len(alpha_table)
 
     def is_increasing(self):
-        """Checks if region is increasing"""
+        """
+        Checks if region is increasing.
+
+        Returns
+        -------
+        bool
+            If region's voltage is increasing.
+        """
         return self.increasing
 
     def update_input_voltage(self, u_in):
-        """Updates input voltage"""
+        """
+        Updates input voltage.
+
+        Parameters
+        ----------
+        u_in : float
+            Input voltage data.
+        """
         self.u_in = u_in
 
     def update_thickness(self, d):
-        """Updates cell thickness"""
+        """
+        Updates cell thickness.
+
+        Parameters
+        ----------
+        d : float
+            Cell thickness data.
+        """
         d /= 1000000.0
         self.d = d
 
     def update_area(self, S):
-        """Updates cell area"""
+        """
+        Updates cell area.
+
+        Parameters
+        ----------
+        S : float
+            Cell area data.
+        """
         S /= 1000000.0
         self.S = S
 
     def update_capacitance(self, C):
-        """Updates cell capacitance"""
+        """
+        Updates cell capacitance.
+
+        Parameters
+        ----------
+        C : float
+            Condensator capacitance.
+        """
         C /= 1000000000.0
         self.C = C
 
     def update_tilt_angle(self, t_ang):
-        """Updates tilt angle"""
+        """
+        Updates tilt angle.
+
+        Parameters
+        ----------
+        t_ang : float
+            Molecules tilt angle.
+        """
         self.t_ang = np.radians(t_ang)
 
     def get_up(self):
-        """Return Up"""
+        """
+        Returns Up.
+
+        Returns
+        -------
+        u_p : float
+            Repolarization voltage.
+        """
         return self.u_p
 
     def get_uc(self):
-        """Return Uc"""
+        """
+        Returns Uc.
+
+        Returns
+        -------
+        u_c : float
+            Conductivity voltage.
+        """
         return self.u_c
 
     def get_tau(self):
-        """Returns tau"""
+        """
+        Returns tau.
+
+        Returns
+        -------
+        tau : float
+            Tau parameter.
+        """
         tau = self.tau
         tau *= 1000000
         return tau
 
     def get_alpha(self):
-        """Returns alpha"""
+        """
+        Returns alpha.
+
+        Returns
+        -------
+        alpha : float
+            Alpha parameter.
+        """
         return self.alpha
 
     def get_sp(self):
-        """Returns Ps"""
+        """
+        Returns Ps.
+
+        Returns
+        -------
+        s_p : float
+            Spontaneous polarization.
+        """
         self.s_p = (self.u_p * self.C) / (2 * self.S)
         s_p = self.s_p * 100000
         return s_p
 
     def get_rv(self):
-        """Returs rv"""
+        """
+        Returs rv.
+
+        Returns
+        -------
+        r_v : float
+            Rotational viscosity.
+        """
         r_v = (self.tau * self.s_p * self.u_in) / (self.d)
         r_v *= 10
         return r_v
 
     def get_da(self):
-        """Returns da"""
+        """
+        Returns da.
+
+        Returns
+        -------
+        d_a : float
+            Dielectric anisotropy.
+        """
         d_a = self.alpha * self.s_p * self.d
         d_a /= (self.u_in * self.e0 * np.sin(self.t_ang)**2)
         return d_a
 
     def get_borders(self):
-        """Returns border coords"""
+        """
+        Returns border coords.
+
+        Returns
+        -------
+        list of float
+            Region's borders coords.
+        """
         return [self.time[0], self.time[-1]]
 
     def get_knee_point(self):
-        """Returns knee point coords"""
+        """
+        Returns knee point coords.
+
+        Returns
+        -------
+        list of float
+            Region's knee coords.
+        """
         return [self.knee_point_time, self.knee_point_voltage]
 
     def get_t40_point(self):
-        """Returns t40 point coords"""
+        """
+        Returns t40 point coords.
+
+        Returns
+        -------
+        list of float
+            Region's t40 rise point coords.
+        """
         return [self.t40_time, self.t40_voltage]
 
     def get_t60_point(self):
-        """Returns t60 point coords"""
+        """
+        Returns t60 point coords.
+
+        Returns
+        -------
+        list of float
+            Region's t60 rise point coords.
+        """
         return [self.t60_time, self.t60_voltage]

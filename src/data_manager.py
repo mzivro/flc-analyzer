@@ -6,16 +6,77 @@ from region import Region
 
 class DataManager():
     """
-    Data manager class responsible for managing region instances
+    Data manager class responsible for managing region instances.
+
+    Abbreviations:
+    ps - Spontaneous Polarization
+    rv - Rotational Viscosity
+    da - Dielectric Anisotropy
+
+    inc region - Region with increasing signal.
+    dec region - Region with decreasing signal.
+
+    Attributes
+    ----------
+    regions : list of Region
+        List of regions managed by this manager
+    data_loaded : bool
+        Flag indicating if data has benn loaded.
+
+    Methods
+    -------
+    load_data(time, voltage)
+        Creates regions and loads data into them.
+    clear_data()
+        Deletes all regions.
+    is_data_loaded()
+        Checks if data is loaded.
+    update_input_voltage(u_in)
+        Loads new voltage data into regions.
+    update_thickness(d)
+        Loads new thickness data into regions.
+    update_area(S)
+        Loads new area data into regions.
+    update_capacitance(C)
+        Loads new capacitance data into regions.
+    update_tilt_angle(t_ang)
+        Loads new tilt angle data into regions.
+    get_sp()
+        Returns averaged ps from all regions.
+    get_rv()
+        Returns averaged rv from all regions.
+    get_da()
+        Returns averaged da from all regions
+    get_inc_regions()
+        Returns border data from inc regions.
+    get_dec_regions()
+        Returns border data from dec regions.
+    get_t40_60_points()
+        Returns t40-60 points data from all regions.
+    get_knee_points()
+        Returns knee points data from all regions.
+    get_chosen_region(x)
+        Returns chosen region.
     """
     def __init__(self):
-        """Inits regions list and sets data loaded flag to false"""
+        """
+        Inits regions list and sets data loaded flag to false.
+        """
         self.regions = []
 
         self.data_loaded = False
 
     def load_data(self, time, voltage):
-        """Processes and loads data into regions"""
+        """
+        Processes and loads data into regions.
+
+        Parameters
+        ----------
+        time : list of float
+            Time data of waveform.
+        voltage : list of float
+            Voltage data of waveform.
+        """
         ext_indexes = []  # extreme value indexes
         bor_indexes = []  # border value indexes
         local_max_index = 0
@@ -135,40 +196,86 @@ class DataManager():
         self.data_loaded = True
 
     def clear_data(self):
-        """Clears regions lists"""
+        """
+        Clears regions lists
+        """
         self.regions.clear()
 
     def is_data_loaded(self):
-        """Checks if data is loaded"""
+        """
+        Checks if data is loaded
+        """
         return self.data_loaded
 
     def update_input_voltage(self, u_in):
-        """Updates input voltages data in regions"""
+        """
+        Updates input voltages data in regions.
+
+        Parameters
+        ----------
+        u_in : float
+            Input voltage amplitude.
+        """
         for region in self.regions:
             region.update_input_voltage(u_in)
 
     def update_thickness(self, d):
-        """Updates cell thickness data in regions"""
+        """
+        Updates cell thickness data in regions.
+
+        Parameters
+        ----------
+        d : float
+            Cell thickness.
+        """
         for region in self.regions:
             region.update_thickness(d)
 
     def update_area(self, S):
-        """Updates cell area data in regions"""
+        """
+        Updates cell area data in regions.
+
+        Parameters
+        ----------
+        S : float
+            Cell area.
+        """
         for region in self.regions:
             region.update_area(S)
 
     def update_capacitance(self, C):
-        """Updates cell capacitance data in regions"""
+        """
+        Updates cell capacitance data in regions
+
+        Parameters
+        ----------
+        C : float
+            Condensator capacitance.
+        """
         for region in self.regions:
             region.update_capacitance(C)
 
     def update_tilt_angle(self, t_ang):
-        """Updates tilt angle data in regions"""
+        """
+        Updates tilt angle data in regions.
+
+        Parameters
+        ----------
+        t_ang : float
+            Molecules tilt angle.
+        """
         for region in self.regions:
             region.update_tilt_angle(t_ang)
 
     def get_sp(self):
-        """Returns averaged sp from all regions"""
+        """
+        Returns averaged sp from all regions.
+
+        Returns
+        -------
+        float
+            Arithmetic mean of sp from all regions.
+        """
         s_p = []
 
         for region in self.regions:
@@ -177,7 +284,14 @@ class DataManager():
         return sum(s_p) / len(s_p)
 
     def get_rv(self):
-        """Returns averaged rv from all regions"""
+        """
+        Returns averaged rv from all regions
+
+        Returns
+        -------
+        float
+            Arithmetic mean of rv from all regions.
+        """
         r_v = []
 
         for region in self.regions:
@@ -186,7 +300,14 @@ class DataManager():
         return sum(r_v) / len(r_v)
 
     def get_da(self):
-        """Returns averaged da from all regions"""
+        """
+        Returns averaged da from all regions.
+
+        Returns
+        -------
+        float
+            Arithmetic mean of da from all regions.
+        """
         d_a = []
 
         for region in self.regions:
@@ -195,7 +316,14 @@ class DataManager():
         return sum(d_a) / len(d_a)
 
     def get_inc_regions(self):
-        """Returns border data from inc regions"""
+        """
+        Returns border data from inc regions.
+
+        Returns
+        -------
+        borders : list of float list
+            Coords of region borders.
+        """
         borders = []
 
         for region in self.regions:
@@ -205,7 +333,14 @@ class DataManager():
         return borders
 
     def get_dec_regions(self):
-        """Returns border data from dec regions"""
+        """
+        Returns border data from dec regions.
+
+        Returns
+        -------
+        borders : list of float list
+            Coords of region borders.
+        """
         borders = []
 
         for region in self.regions:
@@ -215,7 +350,14 @@ class DataManager():
         return borders
 
     def get_t40_60_points(self):
-        """Returns t40-60 points data from all regions"""
+        """
+        Returns t40-60 points data from all regions
+
+        Returns
+        -------
+        points : list of float list
+            Coords of regions rise points.
+        """
         points = []
 
         for region in self.regions:
@@ -225,7 +367,14 @@ class DataManager():
         return points
 
     def get_knee_points(self):
-        """Returns knee points data from all regions"""
+        """
+        Returns knee points data from all regions
+
+        Returns
+        -------
+        points : list of float list
+            Coords of regions knee points.
+        """
         points = []
 
         for region in self.regions:
@@ -234,7 +383,19 @@ class DataManager():
         return points
 
     def get_chosen_region(self, x):
-        """Returns chosen region"""
+        """
+        Returns chosen region.
+
+        Parameters
+        ----------
+        x : float
+            X coord of mouse click event.
+
+        Returns
+        -------
+        region : Region
+            Region data of clicked region.
+        """
         for region in self.regions:
             borders = region.get_borders()
 
